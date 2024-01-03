@@ -49,14 +49,12 @@ def main():
 
     for request in driver.requests:
         if "graphql" in request.url:
-            body = str(decode(request.response.body, request.response.headers.get(
+            decoded_str_body = str(decode(request.response.body, request.response.headers.get(
                 'Content-Encoding', 'identity'))).strip("b'")
 
-            if "GroupsCometFeedRegularStories_paginationGroup" in body:
-                print(json.loads(body))
-
-                with open("dump.txt", "w") as f:
-                    f.write(body)
+            if "GroupsCometFeedRegularStories_paginationGroup" in decoded_str_body:
+                with open("dump", "wb") as f:
+                    f.write(request.response.body)
 
     driver.close()
 
