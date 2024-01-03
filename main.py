@@ -8,6 +8,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 
+with open("config.json", "r") as f:
+    config = json.load(f)
+
+
 options = webdriver.ChromeOptions()
 options.add_argument("--disable-extensions")
 options.add_argument("--profile-directory=Default")
@@ -16,11 +20,7 @@ options.add_argument("--disable-plugins-discovery")
 options.add_argument("--start-maximized")
 options.add_argument("--disable-infobars")
 options.add_argument("--remote-debugging-port=9222")
-options.binary_location = "/snap/bin/chromium"
-
-
-with open("config.json", "r") as f:
-    config = json.load(f)
+options.binary_location = config["CHROME_BINARY"]
 
 
 def main():
