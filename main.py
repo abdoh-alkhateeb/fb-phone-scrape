@@ -1,8 +1,11 @@
 import json
 from time import sleep
-from selenium import webdriver
+from seleniumwire import webdriver
+from seleniumwire.utils import decode
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 
 options = webdriver.ChromeOptions()
@@ -25,25 +28,35 @@ def main():
 
     driver.get("http://www.facebook.com")
 
-    sleep(2)
+    wait = WebDriverWait(driver, 30)
 
-    email = driver.find_element(By.ID, "email")
-    email.clear()
+    email = wait.until(EC.visibility_of_element_located((By.NAME, "email")))
     email.send_keys(config["FB_EMAIL"])
 
-    password = driver.find_element(By.ID, "pass")
-    password.clear()
+    password = wait.until(EC.visibility_of_element_located((By.NAME, "pass")))
     password.send_keys(config["FB_PASSWORD"])
     password.send_keys(Keys.RETURN)
 
-    sleep(2)
+    sleep(5)
 
     driver.get(f"http://www.facebook.com/groups/{config['FB_GROUP_ID']}")
 
-    with open("script.js", "r") as f:
-        driver.execute_script(f.read())
+    sleep(5)
 
-    sleep(60)
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+    sleep(5)
+
+    for request in driver.requests:
+        if "graphql" in request.url:
+            body = str(decode(request.response.body, request.response.headers.get(
+                'Content-Encoding', 'identity'))).strip("b'")
+
+            if "GroupsCometFeedRegularStories_paginationGroup" in body:
+                print(json.loads(body))
+
+                with open("dump.txt", "w") as f:
+                    f.write(body)
 
     driver.close()
 
