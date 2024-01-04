@@ -75,7 +75,8 @@ def main():
 
                             for obj in objects:
                                 if obj.get("label") and "page_info" not in obj["label"]:
-                                    print(obj["data"]["node"]["post_id"])
+                                    if obj["data"].get("node") and obj["data"]["node"].get("post_id"):
+                                        print(obj["data"]["node"]["post_id"])
                                 elif obj.get("label"):
                                     new_cursor = obj["data"]["page_info"]["end_cursor"]
                                     body = parse_qs(body)
