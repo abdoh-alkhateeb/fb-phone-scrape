@@ -60,9 +60,7 @@ def main():
                 objects = [json.loads(line) for line in body.split("\n")]
 
                 for obj in objects:
-                    if obj.get("label") and "page_info" not in obj["label"]:
-                        print(obj["data"]["node"]["post_id"])
-                    elif obj.get("label"):
+                    if obj.get("label") and "page_info" in obj["label"]:
                         body = str(request.body)
 
                         while True:
