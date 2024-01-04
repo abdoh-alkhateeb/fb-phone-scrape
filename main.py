@@ -6,8 +6,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from urllib.parse import parse_qs
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode
 
 
 with open("config.json", "r") as f:
@@ -49,7 +48,7 @@ def main():
 
     sleep(5)
 
-    with open("script.js", "r") as f:
+    with open("fetch_template.js", "r") as f:
         fetch_template = f.read()
 
     for request in driver.requests:
@@ -64,24 +63,15 @@ def main():
                     if obj.get("label") and "page_info" not in obj["label"]:
                         print(obj["data"]["node"]["post_id"])
                     elif obj.get("label"):
-                        new_cursor = obj["data"]["page_info"]["end_cursor"]
-                        body = parse_qs(str(request.body))
-                        # old_variables = body["variables"][0]
-                        # new_variables = json.loads(old_variables)
-                        # new_variables["cursor"] = new_cursor
-                        # body["variables"][0] = json.dumps(new_variables)
-                        body = urlencode(body)
-                        print(body + "\n\n" + str(request.body))
+                        body = str(request.body)
 
                         while True:
-                            # print(body + "\n\n")
                             fetch_request = fetch_template.replace(
                                 '"body": ""', f'"body": "{body}"')
 
                             fetch_response = driver.execute_script(
                                 fetch_request)
 
-                            # print(fetch_response)
                             objects = [json.loads(line)
                                        for line in fetch_response.split("\n")]
 
@@ -89,30 +79,17 @@ def main():
                                 if obj.get("label") and "page_info" not in obj["label"]:
                                     print(obj["data"]["node"]["post_id"])
                                 elif obj.get("label"):
+                                    new_cursor = obj["data"]["page_info"]["end_cursor"]
                                     body = parse_qs(body)
-                                    body["cursor"] = obj["data"]["page_info"]["end_cursor"]
+                                    body = {k: v[0] for k, v in body.items()}
+                                    old_variables = body["variables"]
+                                    new_variables = json.loads(old_variables)
+                                    new_variables["cursor"] = new_cursor
+                                    body["variables"] = json.dumps(
+                                        new_variables)
                                     body = urlencode(body)
 
                             sleep(5)
-
-                # for obj in objects:
-                #     x = obj["data"]
-                #     if "node" in x:
-                #         if "__isFeedUnit" in x["node"]:
-                #             print(x["node"]["post_id"])
-
-                # with  as f:
-                #     fetch_request = f.read()
-                #     fetch_response = driver.execute_script(fetch_request)
-
-                #     objects = [json.loads(line)
-                #                for line in fetch_response.split("\n")]
-
-                #     for obj in objects:
-                #         x = obj["data"]
-                #         if "node" in x:
-                #             if "__isFeedUnit" in x["node"]:
-                #                 print(x["node"]["post_id"])
 
     driver.close()
 
