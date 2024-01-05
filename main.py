@@ -1,3 +1,4 @@
+import os
 import json
 import signal
 from time import sleep
@@ -71,6 +72,8 @@ def main():
 
     dump_file = open("dump.txt", "a")
 
+    count = 0
+
     try:
         for request in driver.requests:
             if "graphql" in request.url:
@@ -110,6 +113,10 @@ def main():
                                         if obj["data"].get("node") and obj["data"]["node"].get("post_id"):
                                             dump_file.write(
                                                 obj["data"]["node"]["post_id"] + "\n")
+                                            os.system("clear")
+                                            count += 1
+                                            print(
+                                                f"Fetched IDs count (in this session): {count}")
                                     elif obj.get("label"):
                                         new_cursor = obj["data"]["page_info"]["end_cursor"]
                                         body = parse_qs(body)
