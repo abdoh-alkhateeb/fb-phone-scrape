@@ -2,13 +2,13 @@ import os
 import json
 import signal
 from time import sleep
+from urllib.parse import parse_qs, urlencode
 from seleniumwire import webdriver
 from seleniumwire.utils import decode
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from urllib.parse import parse_qs, urlencode
 
 
 with open("config.json", "r") as f:
@@ -78,7 +78,7 @@ def main():
         for request in driver.requests:
             if "graphql" in request.url:
                 body = decode(request.response.body, request.response.headers.get(
-                    "Content-Encoding", "identity")).decode("utf-8", "ignore")
+                    "Content-Encoding", "identity")).decode()
 
                 if "GroupsCometFeedRegularStories_paginationGroup" in body:
                     objects = [json.loads(line) for line in body.split("\n")]
@@ -87,7 +87,7 @@ def main():
                         if obj.get("label") and "page_info" in obj["label"]:
                             if new_cursor:
                                 body = parse_qs(
-                                    request.body.decode("utf-8", "ignore"))
+                                    request.body.decode())
                                 body = {k: v[0] for k, v in body.items()}
                                 old_variables = body["variables"]
                                 new_variables = json.loads(old_variables)
@@ -96,7 +96,7 @@ def main():
                                     new_variables)
                                 body = urlencode(body)
                             else:
-                                body = request.body.decode("utf-8", "ignore")
+                                body = request.body.decode()
 
                             while RUNNING:
                                 fetch_request = fetch_template.replace(
