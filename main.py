@@ -71,55 +71,60 @@ def main():
 
     dump_file = open("dump.txt", "a")
 
-    for request in driver.requests:
-        if "graphql" in request.url:
-            body = decode(request.response.body, request.response.headers.get(
-                "Content-Encoding", "identity")).decode()
+    try:
+        for request in driver.requests:
+            if "graphql" in request.url:
+                body = decode(request.response.body, request.response.headers.get(
+                    "Content-Encoding", "identity")).decode()
 
-            if "GroupsCometFeedRegularStories_paginationGroup" in body:
-                objects = [json.loads(line) for line in body.split("\n")]
+                if "GroupsCometFeedRegularStories_paginationGroup" in body:
+                    objects = [json.loads(line) for line in body.split("\n")]
 
-                for obj in objects:
-                    if obj.get("label") and "page_info" in obj["label"]:
-                        if new_cursor:
-                            body = parse_qs(str(request.body))
-                            body = {k: v[0] for k, v in body.items()}
-                            old_variables = body["variables"]
-                            new_variables = json.loads(old_variables)
-                            new_variables["cursor"] = new_cursor
-                            body["variables"] = json.dumps(
-                                new_variables)
-                            body = urlencode(body)
-                        else:
-                            body = str(request.body)
+                    for obj in objects:
+                        if obj.get("label") and "page_info" in obj["label"]:
+                            if new_cursor:
+                                body = parse_qs(str(request.body))
+                                body = {k: v[0] for k, v in body.items()}
+                                old_variables = body["variables"]
+                                new_variables = json.loads(old_variables)
+                                new_variables["cursor"] = new_cursor
+                                body["variables"] = json.dumps(
+                                    new_variables)
+                                body = urlencode(body)
+                            else:
+                                body = str(request.body)
 
-                        while RUNNING:
-                            fetch_request = fetch_template.replace(
-                                '"body": ""', f'"body": "{body}"')
+                            while RUNNING:
+                                fetch_request = fetch_template.replace(
+                                    '"body": ""', f'"body": "{body}"')
 
-                            fetch_response = driver.execute_script(
-                                fetch_request)
+                                fetch_response = driver.execute_script(
+                                    fetch_request)
 
-                            objects = [json.loads(line)
-                                       for line in fetch_response.split("\n")]
+                                objects = [json.loads(line)
+                                           for line in fetch_response.split("\n")]
 
-                            for obj in objects:
-                                if obj.get("label") and "page_info" not in obj["label"]:
-                                    if obj["data"].get("node") and obj["data"]["node"].get("post_id"):
-                                        dump_file.write(
-                                            obj["data"]["node"]["post_id"] + "\n")
-                                elif obj.get("label"):
-                                    new_cursor = obj["data"]["page_info"]["end_cursor"]
-                                    body = parse_qs(body)
-                                    body = {k: v[0] for k, v in body.items()}
-                                    old_variables = body["variables"]
-                                    new_variables = json.loads(old_variables)
-                                    new_variables["cursor"] = new_cursor
-                                    body["variables"] = json.dumps(
-                                        new_variables)
-                                    body = urlencode(body)
+                                for obj in objects:
+                                    if obj.get("label") and "page_info" not in obj["label"]:
+                                        if obj["data"].get("node") and obj["data"]["node"].get("post_id"):
+                                            dump_file.write(
+                                                obj["data"]["node"]["post_id"] + "\n")
+                                    elif obj.get("label"):
+                                        new_cursor = obj["data"]["page_info"]["end_cursor"]
+                                        body = parse_qs(body)
+                                        body = {k: v[0]
+                                                for k, v in body.items()}
+                                        old_variables = body["variables"]
+                                        new_variables = json.loads(
+                                            old_variables)
+                                        new_variables["cursor"] = new_cursor
+                                        body["variables"] = json.dumps(
+                                            new_variables)
+                                        body = urlencode(body)
 
-                            sleep(5)
+                                sleep(5)
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
 
     dump_file.close()
 
