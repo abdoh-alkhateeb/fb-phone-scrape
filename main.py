@@ -1,4 +1,5 @@
 import json
+import signal
 from time import sleep
 from seleniumwire import webdriver
 from seleniumwire.utils import decode
@@ -24,7 +25,18 @@ options.add_argument("--remote-debugging-port=9222")
 options.binary_location = config["CHROME_BINARY"]
 
 
+def terminate_handler(sig, frame):
+    global RUNNING
+    RUNNING = False
+
+
+signal.signal(signal.SIGINT, terminate_handler)
+
+
 def main():
+    global RUNNING
+    RUNNING = True
+
     driver = webdriver.Chrome(options=options)
 
     driver.get("http://www.facebook.com")
@@ -51,6 +63,14 @@ def main():
     with open("fetch_template.js", "r") as f:
         fetch_template = f.read()
 
+    try:
+        with open("last_cursor.txt", "r") as f:
+            new_cursor = f.read()
+    except:
+        new_cursor = ""
+
+    dump_file = open("dump.txt", "a")
+
     for request in driver.requests:
         if "graphql" in request.url:
             body = decode(request.response.body, request.response.headers.get(
@@ -61,9 +81,19 @@ def main():
 
                 for obj in objects:
                     if obj.get("label") and "page_info" in obj["label"]:
-                        body = str(request.body)
+                        if new_cursor:
+                            body = parse_qs(str(request.body))
+                            body = {k: v[0] for k, v in body.items()}
+                            old_variables = body["variables"]
+                            new_variables = json.loads(old_variables)
+                            new_variables["cursor"] = new_cursor
+                            body["variables"] = json.dumps(
+                                new_variables)
+                            body = urlencode(body)
+                        else:
+                            body = str(request.body)
 
-                        while True:
+                        while RUNNING:
                             fetch_request = fetch_template.replace(
                                 '"body": ""', f'"body": "{body}"')
 
@@ -76,7 +106,8 @@ def main():
                             for obj in objects:
                                 if obj.get("label") and "page_info" not in obj["label"]:
                                     if obj["data"].get("node") and obj["data"]["node"].get("post_id"):
-                                        print(obj["data"]["node"]["post_id"])
+                                        dump_file.write(
+                                            obj["data"]["node"]["post_id"] + "\n")
                                 elif obj.get("label"):
                                     new_cursor = obj["data"]["page_info"]["end_cursor"]
                                     body = parse_qs(body)
@@ -89,6 +120,11 @@ def main():
                                     body = urlencode(body)
 
                             sleep(5)
+
+    dump_file.close()
+
+    with open("last_cursor.txt", "w") as f:
+        f.write(new_cursor)
 
     driver.close()
 
