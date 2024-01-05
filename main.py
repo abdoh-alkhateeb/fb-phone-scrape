@@ -131,7 +131,7 @@ def main():
     with open("last_cursor.txt", "w") as f:
         f.write(new_cursor)
 
-    driver.close()
+    driver.quit()
 
 
 if __name__ == "__main__":
