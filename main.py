@@ -83,7 +83,7 @@ def main():
                     for obj in objects:
                         if obj.get("label") and "page_info" in obj["label"]:
                             if new_cursor:
-                                body = parse_qs(str(request.body))
+                                body = parse_qs(request.body.decode())
                                 body = {k: v[0] for k, v in body.items()}
                                 old_variables = body["variables"]
                                 new_variables = json.loads(old_variables)
@@ -92,7 +92,7 @@ def main():
                                     new_variables)
                                 body = urlencode(body)
                             else:
-                                body = str(request.body)
+                                body = request.body.decode()
 
                             while RUNNING:
                                 fetch_request = fetch_template.replace(
