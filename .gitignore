@@ -1,4 +1,5 @@
 .venv
 config.json
 dump.txt
-dump
+last_cursor.txt
+
