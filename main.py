@@ -1,6 +1,5 @@
 import os
 import json
-import signal
 from time import sleep
 from urllib.parse import parse_qs, urlencode
 from seleniumwire import webdriver
@@ -16,30 +15,15 @@ with open("config.json", "r") as f:
 
 
 options = webdriver.ChromeOptions()
-options.add_argument("--disable-extensions")
-options.add_argument("--profile-directory=Default")
 options.add_argument("--incognito")
-options.add_argument("--disable-plugins-discovery")
-options.add_argument("--start-maximized")
-options.add_argument("--disable-infobars")
+options.add_argument("--headless")
 options.add_argument("--remote-debugging-port=9222")
+options.add_argument("--disable-extensions")
+options.add_argument("--disable-plugins-discovery")
 options.binary_location = config["CHROME_BINARY"]
 
 
-def terminate_handler(sig, frame):
-    global RUNNING
-    RUNNING = False
-
-
-signal.signal(signal.SIGINT, terminate_handler)
-
-
-def main():
-    global RUNNING
-    RUNNING = True
-
-    driver = webdriver.Chrome(options=options)
-
+def init_driver(driver):
     driver.get("http://www.facebook.com")
 
     wait = WebDriverWait(driver, 30)
@@ -61,85 +45,116 @@ def main():
 
     sleep(5)
 
-    with open("fetch_template.js", "r") as f:
-        fetch_template = f.read()
 
-    try:
-        with open("last_cursor.txt", "r") as f:
-            new_cursor = f.read()
-    except:
-        new_cursor = ""
+def update_body(body, new_cursor):
+    body = parse_qs(body)
+    body = {k: v[0] for k, v in body.items()}
 
-    dump_file = open("dump.txt", "a")
+    old_variables = body["variables"]
 
+    new_variables = json.loads(old_variables)
+    new_variables["cursor"] = new_cursor
+
+    body["variables"] = json.dumps(new_variables)
+
+    return urlencode(body)
+
+
+def fetch_ids(driver, fetch_template, last_cursor, dump_file):
     count = 0
 
+    for request in driver.requests:
+        if "graphql" not in request.url:
+            continue
+
+        body = decode(request.response.body, request.response.headers.get(
+            "Content-Encoding", "identity")).decode()
+
+        if "GroupsCometFeedRegularStories_paginationGroup" not in body:
+            continue
+
+        objects = [json.loads(line) for line in body.split("\n")]
+
+        break
+
+    for obj in objects:
+        if not obj.get("label") or "page_info" not in obj["label"]:
+            continue
+
+        if last_cursor:
+            body = update_body(request.body.decode(), last_cursor)
+        else:
+            body = request.body.decode()
+
+        break
+
     try:
-        for request in driver.requests:
-            if "graphql" in request.url:
-                body = decode(request.response.body, request.response.headers.get(
-                    "Content-Encoding", "identity")).decode()
+        while True:
+            fetch_request = fetch_template.replace(
+                '"body": ""', f'"body": "{body}"')
 
-                if "GroupsCometFeedRegularStories_paginationGroup" in body:
-                    objects = [json.loads(line) for line in body.split("\n")]
+            fetch_response = driver.execute_script(fetch_request)
 
-                    for obj in objects:
-                        if obj.get("label") and "page_info" in obj["label"]:
-                            if new_cursor:
-                                body = parse_qs(
-                                    request.body.decode())
-                                body = {k: v[0] for k, v in body.items()}
-                                old_variables = body["variables"]
-                                new_variables = json.loads(old_variables)
-                                new_variables["cursor"] = new_cursor
-                                body["variables"] = json.dumps(
-                                    new_variables)
-                                body = urlencode(body)
-                            else:
-                                body = request.body.decode()
+            objects = [json.loads(line)
+                       for line in fetch_response.split("\n")]
 
-                            while RUNNING:
-                                fetch_request = fetch_template.replace(
-                                    '"body": ""', f'"body": "{body}"')
+            for obj in objects:
+                if not obj.get("label"):
+                    continue
 
-                                fetch_response = driver.execute_script(
-                                    fetch_request)
+                if "page_info" in obj["label"]:
+                    new_cursor = obj["data"]["page_info"]["end_cursor"]
+                    body = update_body(body, new_cursor)
+                    continue
 
-                                objects = [json.loads(line)
-                                           for line in fetch_response.split("\n")]
+                if not obj["data"].get("node") or not obj["data"]["node"].get("post_id"):
+                    continue
 
-                                for obj in objects:
-                                    if obj.get("label") and "page_info" not in obj["label"]:
-                                        if obj["data"].get("node") and obj["data"]["node"].get("post_id"):
-                                            dump_file.write(
-                                                obj["data"]["node"]["post_id"] + "\n")
-                                            os.system("clear")
-                                            count += 1
-                                            print(
-                                                f"Fetched IDs count (in this session): {count}")
-                                    elif obj.get("label"):
-                                        new_cursor = obj["data"]["page_info"]["end_cursor"]
-                                        body = parse_qs(body)
-                                        body = {k: v[0]
-                                                for k, v in body.items()}
-                                        old_variables = body["variables"]
-                                        new_variables = json.loads(
-                                            old_variables)
-                                        new_variables["cursor"] = new_cursor
-                                        body["variables"] = json.dumps(
-                                            new_variables)
-                                        body = urlencode(body)
+                dump_file.write(obj["data"]["node"]["post_id"] + "\n")
+                count += 1
 
-                                sleep(5)
+                os.system("cls") if os.name == "nt" else os.system("clear")
+                print(f"Fetched IDs count (current session): {count}")
+
+            sleep(5)
+    except KeyboardInterrupt:
+        print("Exiting...")
+
+    try:
+        return new_cursor
+    except NameError:
+        return last_cursor
+
+
+def main():
+    try:
+        driver = webdriver.Chrome(options=options)
+        init_driver(driver)
+
+        with open("fetch_template.js", "r") as fetch_template_file:
+            fetch_template = fetch_template_file.read()
+
+        try:
+            with open("last_cursor.txt", "r") as last_cursor_file:
+                last_cursor = last_cursor_file.read()
+        except FileNotFoundError:
+            last_cursor = ""
+
+        with open("dump.txt", "a") as dump_file:
+            last_cursor = fetch_ids(
+                driver, fetch_template, last_cursor, dump_file)
+
+        with open("last_cursor.txt", "w") as last_cursor_file:
+            last_cursor_file.write(last_cursor)
+    except KeyboardInterrupt:
+        print("Exiting...")
     except Exception as e:
         print(f"Error occurred: {str(e)}")
-
-    dump_file.close()
-
-    with open("last_cursor.txt", "w") as f:
-        f.write(new_cursor)
-
-    driver.quit()
+    finally:
+        try:
+            driver.quit()
+        except NameError:
+            pass
 
 
 if __name__ == "__main__":
