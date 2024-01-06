@@ -89,6 +89,7 @@ def fetch_ids(driver, fetch_template, last_cursor, dump_file):
 
             break
     except UnboundLocalError:
+        print("Initialization not successful. Exiting...")
         return last_cursor
 
     try:
