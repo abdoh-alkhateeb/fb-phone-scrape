@@ -77,16 +77,19 @@ def fetch_ids(driver, fetch_template, last_cursor, dump_file):
 
         break
 
-    for obj in objects:
-        if not obj.get("label") or "page_info" not in obj["label"]:
-            continue
+    try:
+        for obj in objects:
+            if not obj.get("label") or "page_info" not in obj["label"]:
+                continue
 
-        if last_cursor:
-            body = update_body(request.body.decode(), last_cursor)
-        else:
-            body = request.body.decode()
+            if last_cursor:
+                body = update_body(request.body.decode(), last_cursor)
+            else:
+                body = request.body.decode()
 
-        break
+            break
+    except UnboundLocalError:
+        return last_cursor
 
     try:
         while True:
@@ -119,6 +122,8 @@ def fetch_ids(driver, fetch_template, last_cursor, dump_file):
             sleep(5)
     except KeyboardInterrupt:
         print("Exiting...")
+    except json.JSONDecodeError:
+        print("Response empty. Exiting...")
 
     try:
         return new_cursor
