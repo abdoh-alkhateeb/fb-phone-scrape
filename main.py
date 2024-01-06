@@ -24,7 +24,7 @@ options.binary_location = config["CHROME_BINARY"]
 
 
 def init_driver(driver):
-    driver.get("http://www.facebook.com")
+    driver.get("https://www.facebook.com")
 
     wait = WebDriverWait(driver, 30)
 
@@ -37,7 +37,7 @@ def init_driver(driver):
 
     sleep(5)
 
-    driver.get(f"http://www.facebook.com/groups/{config['FB_GROUP_ID']}")
+    driver.get(f"https://www.facebook.com/{config['FB_GROUP_ID']}")
 
     sleep(5)
 
