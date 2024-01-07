@@ -8,7 +8,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-
+import traceback
 
 with open("config.json", "r") as f:
     config = json.load(f)
@@ -110,8 +110,10 @@ def fetch_ids(driver, fetch_template, last_cursor, dump_file):
                         new_cursor = obj["data"]["page_info"]["end_cursor"]
                         body = update_body(body, new_cursor)
                         continue
-
-                    post_id = obj["data"]["node"]["post_id"]
+                    try:
+                        post_id = obj["data"]["node"]["post_id"]
+                    except KeyError:
+                        continue
                 else:
                     continue
 
@@ -157,6 +159,7 @@ def main():
         print("Exiting...")
     except Exception as e:
         print(f"Error occurred: {str(e)}")
+        traceback.print_exc()
     finally:
         try:
             driver.quit()
