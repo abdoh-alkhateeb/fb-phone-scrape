@@ -1,4 +1,4 @@
-let response = await fetch("https://www.facebook.com/api/graphql/", {
+const response = await fetch("https://www.facebook.com/api/graphql/", {
     "headers": {
         "accept": "*/*",
         "accept-language": "en-US,en;q=0.9",
@@ -27,6 +27,6 @@ let response = await fetch("https://www.facebook.com/api/graphql/", {
     "credentials": "include"
 });
 
-let data = await response.text();
+const data = await response.text();
 
 return data;
