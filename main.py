@@ -62,7 +62,7 @@ def update_body(body, new_cursor):
     return urlencode(body)
 
 
-def fetch_ids(driver, fetch_template, last_cursor, dump_directory):
+def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, dump_directory):
     count = 0
 
     for request in driver.requests:
@@ -96,10 +96,13 @@ def fetch_ids(driver, fetch_template, last_cursor, dump_directory):
 
     try:
         while True:
-            fetch_request = fetch_template.replace(
-                '"body": ""', f'"body": "{body}"')
+            fetch_post_request = fetch_post_template.replace(
+                '"body": ""',
+                f'"body": "{body}"').replace(
+                    '"referrer": ""',
+                    '"referrer": "https://www.facebook.com/groups/' + config['FB_GROUP_ID'] + '"')
 
-            fetch_response = driver.execute_script(fetch_request)
+            fetch_response = driver.execute_script(fetch_post_request)
 
             objects = [json.loads(line)
                        for line in fetch_response.split("\n")]
@@ -154,8 +157,11 @@ def main():
         driver = webdriver.Chrome(options=options)
         init_driver(driver)
 
-        with open("fetch_template.js", "r") as fetch_template_file:
-            fetch_template = fetch_template_file.read()
+        with open("fetch_post.js", "r") as fetch_template_file:
+            fetch_post_template = fetch_template_file.read()
+
+        with open("fetch_comment.js", "r") as fetch_template_file:
+            fetch_comment_template = fetch_template_file.read()
 
         try:
             with open("last_cursor.txt", "r") as last_cursor_file:
@@ -165,16 +171,15 @@ def main():
 
         os.makedirs(dump_directory, exist_ok=True)
 
-        last_cursor = fetch_ids(driver, fetch_template,
-                                last_cursor, dump_directory)
+        last_cursor = fetch_ids(driver, fetch_post_template,
+                                fetch_comment_template, last_cursor, dump_directory)
 
         with open("last_cursor.txt", "w") as last_cursor_file:
             last_cursor_file.write(last_cursor)
     except KeyboardInterrupt:
         print("Exiting...")
     except Exception as e:
-        print(f"Error occurred: {str(e)}")
-        traceback.print_exc()
+        print(f"Error occurred:\n{traceback.format_exc()}")
     finally:
         try:
             driver.quit()
