@@ -1,5 +1,6 @@
 import os
 import json
+import traceback
 from time import sleep
 from urllib.parse import parse_qs, urlencode
 from seleniumwire import webdriver
@@ -8,7 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-import traceback
+
 
 with open("config.json", "r") as f:
     config = json.load(f)
@@ -37,7 +38,8 @@ def init_driver(driver):
 
     sleep(5)
 
-    driver.get(f"https://www.facebook.com/{config['FB_GROUP_ID']}")
+    driver.get(
+        f"https://www.facebook.com/groups/{config['FB_GROUP_ID']}?sorting_setting=CHRONOLOGICAL")
 
     sleep(5)
 
@@ -117,10 +119,16 @@ def fetch_ids(driver, fetch_template, last_cursor, dump_directory):
                 else:
                     continue
 
-                with open(os.path.join(dump_directory, node["post_id"]) + ".json", "w", encoding="utf-8") as dump_file:
-                    data = {
-                        "id": node["post_id"], "text": node["comet_sections"]["content"]["story"]["message"]["text"]}
-                    json.dump(data, dump_file, ensure_ascii=False)
+                dump_file_name = os.path.join(dump_directory, node["post_id"])
+                with open(f"{dump_file_name}.json", "w", encoding="utf-8") as dump_file:
+                    id = node["post_id"]
+                    try:
+                        text = node["comet_sections"]["content"]["story"]["message"]["text"]
+                    except TypeError:
+                        text = ""
+
+                    json.dump({"id": id, "text": text},
+                              dump_file, ensure_ascii=False)
 
                 count += 1
 
@@ -155,7 +163,7 @@ def main():
         except FileNotFoundError:
             last_cursor = ""
 
-        os.makedirs(dump_directory)
+        os.makedirs(dump_directory, exist_ok=True)
 
         last_cursor = fetch_ids(driver, fetch_template,
                                 last_cursor, dump_directory)
