@@ -102,10 +102,10 @@ def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, 
                     '"referrer": ""',
                     '"referrer": "https://www.facebook.com/groups/' + config['FB_GROUP_ID'] + '"')
 
-            fetch_response = driver.execute_script(fetch_post_request)
+            fetch_post_response = driver.execute_script(fetch_post_request)
 
             objects = [json.loads(line)
-                       for line in fetch_response.split("\n")]
+                       for line in fetch_post_response.split("\n")]
 
             for obj in objects:
                 if obj.keys() == {"data", "extensions"}:
