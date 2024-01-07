@@ -60,7 +60,7 @@ def update_body(body, new_cursor):
     return urlencode(body)
 
 
-def fetch_ids(driver, fetch_template, last_cursor, dump_file):
+def fetch_ids(driver, fetch_template, last_cursor, dump_directory):
     count = 0
 
     for request in driver.requests:
@@ -104,20 +104,24 @@ def fetch_ids(driver, fetch_template, last_cursor, dump_file):
 
             for obj in objects:
                 if obj.keys() == {"data", "extensions"}:
-                    post_id = obj["data"]["node"]["group_feed"]["edges"][0]["node"]["post_id"]
+                    node = obj["data"]["node"]["group_feed"]["edges"][0]["node"]
                 elif obj.keys() == {"label", "path", "data", "extensions"}:
                     if "page_info" in obj["label"]:
                         new_cursor = obj["data"]["page_info"]["end_cursor"]
                         body = update_body(body, new_cursor)
                         continue
                     try:
-                        post_id = obj["data"]["node"]["post_id"]
+                        node = obj["data"]["node"]
                     except KeyError:
                         continue
                 else:
                     continue
 
-                dump_file.write(post_id + "\n")
+                with open(os.path.join(dump_directory, node["post_id"]) + ".json", "w", encoding="utf-8") as dump_file:
+                    data = {
+                        "id": node["post_id"], "text": node["comet_sections"]["content"]["story"]["message"]["text"]}
+                    json.dump(data, dump_file, ensure_ascii=False)
+
                 count += 1
 
                 os.system("cls") if os.name == "nt" else os.system("clear")
@@ -137,6 +141,8 @@ def fetch_ids(driver, fetch_template, last_cursor, dump_file):
 
 def main():
     try:
+        dump_directory = "scrape_out"
+
         driver = webdriver.Chrome(options=options)
         init_driver(driver)
 
@@ -149,9 +155,10 @@ def main():
         except FileNotFoundError:
             last_cursor = ""
 
-        with open("dump.txt", "a") as dump_file:
-            last_cursor = fetch_ids(
-                driver, fetch_template, last_cursor, dump_file)
+        os.makedirs(dump_directory)
+
+        last_cursor = fetch_ids(driver, fetch_template,
+                                last_cursor, dump_directory)
 
         with open("last_cursor.txt", "w") as last_cursor_file:
             last_cursor_file.write(last_cursor)
