@@ -103,18 +103,19 @@ def fetch_ids(driver, fetch_template, last_cursor, dump_file):
                        for line in fetch_response.split("\n")]
 
             for obj in objects:
-                if not obj.get("label"):
+                if obj.keys() == {"data", "extensions"}:
+                    post_id = obj["data"]["node"]["group_feed"]["edges"][0]["node"]["post_id"]
+                elif obj.keys() == {"label", "path", "data", "extensions"}:
+                    if "page_info" in obj["label"]:
+                        new_cursor = obj["data"]["page_info"]["end_cursor"]
+                        body = update_body(body, new_cursor)
+                        continue
+
+                    post_id = obj["data"]["node"]["post_id"]
+                else:
                     continue
 
-                if "page_info" in obj["label"]:
-                    new_cursor = obj["data"]["page_info"]["end_cursor"]
-                    body = update_body(body, new_cursor)
-                    continue
-
-                if not obj["data"].get("node") or not obj["data"]["node"].get("post_id"):
-                    continue
-
-                dump_file.write(obj["data"]["node"]["post_id"] + "\n")
+                dump_file.write(post_id + "\n")
                 count += 1
 
                 os.system("cls") if os.name == "nt" else os.system("clear")
