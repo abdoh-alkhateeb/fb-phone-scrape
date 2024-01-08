@@ -14,10 +14,10 @@ const response = await fetch("https://www.facebook.com/api/graphql/", {
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-origin",
-        "viewport-width": "805",
+        "viewport-width": "1080",
         "x-asbd-id": "129477",
-        "x-fb-friendly-name": "CometFocusedStoryViewUFIQuery",
-        "x-fb-lsd": "EFa54Af4ybYloyFy8-EQbo"
+        "x-fb-friendly-name": "CommentListComponentsRootQuery",
+        "x-fb-lsd": "C8UnA0n15gTT9j1wP8UMOP"
     },
     "referrer": "",
     "referrerPolicy": "strict-origin-when-cross-origin",
@@ -27,6 +27,6 @@ const response = await fetch("https://www.facebook.com/api/graphql/", {
     "credentials": "include"
 });
 
-const data = await response.json();
+const data = await response.text();
 
 return data;
