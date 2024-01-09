@@ -62,7 +62,7 @@ def update_fetch_post_body(body, new_cursor):
     return urlencode(body)
 
 
-def update_fetch_comment_body(body, feedback_id):
+def update_main_fetch_comment_body(body, feedback_id):
     body = parse_qs(body)
     body = {k: v[0] for k, v in body.items()}
 
@@ -72,7 +72,24 @@ def update_fetch_comment_body(body, feedback_id):
 
     body["variables"] = json.dumps(new_variables)
     body["fb_api_req_friendly_name"] = "CommentListComponentsRootQuery"
-    # body["doc_id"] = ""
+    body["doc_id"] = 24442488642063884
+    del body["__req"]
+
+    return urlencode(body)
+
+
+def update_secondary_fetch_comment_body(body, feedback_id, new_cursor):
+    body = parse_qs(body)
+    body = {k: v[0] for k, v in body.items()}
+
+    old_variables = """{"commentsAfterCount":-1,"commentsAfterCursor":"AQHRcUzPl7NxbfxJnMXQs4HcVjZkY91QnGfoybTKnDJyRRUYPsnxT8dm0Nyl1ssFkSduhcTBAog-821FbUumrdZiqg","commentsBeforeCount":null,"commentsBeforeCursor":null,"commentsIntentToken":"CHRONOLOGICAL_UNFILTERED_INTENT_V1","feedLocation":"GROUP_PERMALINK","focusCommentID":null,"scale":1,"useDefaultActor":false,"id":"ZmVlZGJhY2s6MjM5MDM2NzQ1MTE2MDEwNg=="}"""
+    new_variables = json.loads(old_variables)
+    new_variables["id"] = feedback_id
+    new_variables["commentsAfterCursor"] = new_cursor
+
+    body["variables"] = json.dumps(new_variables)
+    body["fb_api_req_friendly_name"] = "CommentsListComponentsPaginationQuery"
+    body["doc_id"] = 7114405888582562
     del body["__req"]
 
     return urlencode(body)
@@ -148,36 +165,91 @@ def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, 
                     except TypeError:
                         text = ""
 
-                    # story_id = story["id"]
                     feedback_id = story["feedback"]["id"]
 
-                    _body = update_fetch_comment_body(
+                    _body = update_main_fetch_comment_body(
                         body, feedback_id)
 
                     fetch_comment_request = fetch_comment_template.replace(
                         '"body": ""',
-                        f'"body": "{_body}"').replace(
+                        f'"body": "{_body}"'
+                    ).replace(
+                        '"referrer": ""',
+                        '"referrer": "https://www.facebook.com/groups/' +
+                        config['FB_GROUP_ID'] + '"'
+                    ).replace(
+                        '"x-fb-friendly-name": ""',
+                        '"x-fb-friendly-name": "CommentListComponentsRootQuery"'
+                    )
+
+                    fetch_comment_response = driver.execute_script(
+                        fetch_comment_request)
+
+                    data = [json.loads(line)
+                            for line in fetch_comment_response.split("\n")][0]
+
+                    data = data["data"]["node"]["comment_rendering_instance_for_feed_location"]["comments"]
+
+                    comments = [edge["node"]["body"] for edge in data["edges"]]
+
+                    comments = [item.get("text")
+                                for item in comments if item is not None]
+
+                    if data["page_info"].get("end_cursor"):
+                        done = False
+                        new_comment_cursor = data["page_info"]["end_cursor"]
+                    else:
+                        done = True
+
+                    while not done:
+                        _body = update_secondary_fetch_comment_body(
+                            body, new_comment_cursor, feedback_id)
+
+                        fetch_comment_request = fetch_comment_template.replace(
+                            '"body": ""',
+                            f'"body": "{_body}"'
+                        ).replace(
                             '"referrer": ""',
-                            '"referrer": "https://www.facebook.com/groups/' + config['FB_GROUP_ID'] + '"')
+                            '"referrer": "https://www.facebook.com/groups/' +
+                            config['FB_GROUP_ID'] + '"'
+                        ).replace(
+                            '"x-fb-friendly-name": ""',
+                            '"x-fb-friendly-name": "CommentsListComponentsPaginationQuery"'
+                        )
 
-                    result = driver.execute_script(fetch_comment_request)
+                        fetch_comment_response = driver.execute_script(
+                            fetch_comment_request)
 
-                    print(result)
+                        data = [json.loads(line)
+                                for line in fetch_comment_response.split("\n")][0]
 
-                    comments = []
+                        if not data["data"].get("node"):
+                            break
+
+                        data = data["data"]["node"]["comment_rendering_instance_for_feed_location"]["comments"]
+
+                        comments.extend([edge["node"]["body"].get(
+                            "text") for edge in data["edges"] if edge["node"]["body"] is not None])
+
+                        if data["page_info"].get("end_cursor"):
+                            done = False
+                            new_comment_cursor = data["page_info"]["end_cursor"]
+                        else:
+                            done = True
+
                     json.dump({"id": id, "text": text, "comments": comments},
                               dump_file, ensure_ascii=False)
 
                 count += 1
 
-                # os.system("cls") if os.name == "nt" else os.system("clear")
+                os.system("cls") if os.name == "nt" else os.system("clear")
                 print(f"Fetched IDs count (current session): {count}")
 
             sleep(5)
     except KeyboardInterrupt:
         print("Exiting...")
     except json.JSONDecodeError:
-        print("Response empty. Exiting...")
+        print("Response empty or unsupported. Exiting...")
 
     try:
         return new_cursor
