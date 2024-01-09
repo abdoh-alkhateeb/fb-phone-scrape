@@ -238,7 +238,7 @@ def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, 
                             done = True
 
                     json.dump({"id": id, "text": text, "comments": comments},
-                              dump_file, ensure_ascii=False)
+                              dump_file, indent=4, ensure_ascii=False)
 
                 count += 1
 
