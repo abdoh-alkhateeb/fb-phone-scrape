@@ -16,7 +16,7 @@ const response = await fetch("https://www.facebook.com/api/graphql/", {
         "sec-fetch-site": "same-origin",
         "viewport-width": "1080",
         "x-asbd-id": "129477",
-        "x-fb-friendly-name": "CommentListComponentsRootQuery",
+        "x-fb-friendly-name": ""
     },
     "referrer": "",
     "referrerPolicy": "strict-origin-when-cross-origin",
