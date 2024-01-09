@@ -62,17 +62,18 @@ def update_fetch_post_body(body, new_cursor):
     return urlencode(body)
 
 
-def update_fetch_comment_body(body, story_id, feedback_id):
+def update_fetch_comment_body(body, feedback_id):
     body = parse_qs(body)
     body = {k: v[0] for k, v in body.items()}
 
-    old_variables = """{"UFI2CommentsProvider_commentsKey":"CometFocusedStoryView","feedbackID":"ZmVlZGJhY2s6MzU1MjM2NjEzNTAyNTU4MA==","feedbackSource":110,"feedLocation":"DEDICATED_COMMENTING_SURFACE","scale":1,"storyID":"UzpfSTYxNTUyNzM2MDY2MzgwOlZLOjM1NTIzNjYxMzUwMjU1ODA=","__relay_internal__pv__CometUFIIsRTAEnabledrelayprovider":false,"__relay_internal__pv__CometUFIReactionsEnableShortNamerelayprovider":false}"""
+    old_variables = """{"commentsIntentToken":"CHRONOLOGICAL_UNFILTERED_INTENT_V1","feedLocation":"DEDICATED_COMMENTING_SURFACE","feedbackSource":110,"focusCommentID":null,"scale":1,"useDefaultActor":false,"id":"ZmVlZGJhY2s6NzQ1MDIyNzkzMTY5NDkzNg=="}"""
     new_variables = json.loads(old_variables)
-    new_variables["storyID"] = story_id
-    new_variables["feedbackID"] = feedback_id
+    new_variables["id"] = feedback_id
 
     body["variables"] = json.dumps(new_variables)
-    body["fb_api_req_friendly_name"] = "CometFocusedStoryViewUFIQuery"
+    body["fb_api_req_friendly_name"] = "CommentListComponentsRootQuery"
+    # body["doc_id"] = ""
+    del body["__req"]
 
     return urlencode(body)
 
@@ -147,13 +148,11 @@ def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, 
                     except TypeError:
                         text = ""
 
-                    story_id = story["id"]
+                    # story_id = story["id"]
                     feedback_id = story["feedback"]["id"]
 
                     _body = update_fetch_comment_body(
-                        body, story_id, feedback_id)
-
-                    print(_body)
+                        body, feedback_id)
 
                     fetch_comment_request = fetch_comment_template.replace(
                         '"body": ""',
@@ -163,8 +162,7 @@ def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, 
 
                     result = driver.execute_script(fetch_comment_request)
 
-                    # print(type(result))
-                    # print(result)
+                    print(result)
 
                     comments = []
                     json.dump({"id": id, "text": text, "comments": comments},
@@ -172,7 +170,7 @@ def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, 
 
                 count += 1
 
-                os.system("cls") if os.name == "nt" else os.system("clear")
+                # os.system("cls") if os.name == "nt" else os.system("clear")
                 print(f"Fetched IDs count (current session): {count}")
 
             sleep(5)
