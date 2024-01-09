@@ -17,7 +17,6 @@ const response = await fetch("https://www.facebook.com/api/graphql/", {
         "viewport-width": "1080",
         "x-asbd-id": "129477",
         "x-fb-friendly-name": "GroupsCometFeedRegularStoriesPaginationQuery",
-        "x-fb-lsd": "n7aq3Yl_YTlpNhCN4sMUrl"
     },
     "referrer": "",
     "referrerPolicy": "strict-origin-when-cross-origin",
