@@ -195,15 +195,9 @@ def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, 
                     comments = [item.get("text")
                                 for item in comments if item is not None]
 
-                    if data["page_info"].get("has_next_page"):
-                        done = False
-                        new_comment_cursor = data["page_info"]["end_cursor"]
-                    else:
-                        done = True
-
-                    while not done:
+                    while data["page_info"].get("has_next_page"):
                         _body = update_secondary_fetch_comment_body(
-                            body, new_comment_cursor, feedback_id)
+                            body, data["page_info"]["end_cursor"], feedback_id)
 
                         fetch_comment_request = fetch_comment_template.replace(
                             '"body": ""',
@@ -230,11 +224,6 @@ def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, 
 
                         comments.extend([edge["node"]["body"].get(
                             "text") for edge in data["edges"] if edge["node"]["body"] is not None])
-
-                        if data["page_info"].get("has_next_page"):
-                            new_comment_cursor = data["page_info"]["end_cursor"]
-                        else:
-                            done = True
 
                     json.dump({"id": id, "text": text, "comments": comments},
                               dump_file, indent=4, ensure_ascii=False)
