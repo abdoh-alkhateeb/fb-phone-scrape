@@ -195,7 +195,7 @@ def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, 
                     comments = [item.get("text")
                                 for item in comments if item is not None]
 
-                    if data["page_info"].get("end_cursor"):
+                    if data["page_info"].get("has_next_page"):
                         done = False
                         new_comment_cursor = data["page_info"]["end_cursor"]
                     else:
@@ -231,8 +231,7 @@ def fetch_ids(driver, fetch_post_template, fetch_comment_template, last_cursor, 
                         comments.extend([edge["node"]["body"].get(
                             "text") for edge in data["edges"] if edge["node"]["body"] is not None])
 
-                        if data["page_info"].get("end_cursor"):
-                            done = False
+                        if data["page_info"].get("has_next_page"):
                             new_comment_cursor = data["page_info"]["end_cursor"]
                         else:
                             done = True
