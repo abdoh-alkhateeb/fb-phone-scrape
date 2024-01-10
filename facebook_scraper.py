@@ -4,8 +4,8 @@ from time import sleep
 from urllib.parse import parse_qs, urlencode
 from seleniumwire import webdriver
 from seleniumwire.utils import decode
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -77,12 +77,14 @@ class FacebookScraper:
         self.extract_initial_graphql_request()
         self.prepare_initial_fetch_request_body()
 
+        dump_file = open("dump.txt", "a", encoding="ascii")
         try:
             count = 0
             while True:
                 nodes = self.fetch_posts()
                 for node in nodes:
                     self.scrape_node(node)
+                    dump_file.write(node["post_id"] + "\n")
                     count += 1
 
                 os.system("cls") if os.name == "nt" else os.system("clear")
@@ -93,6 +95,8 @@ class FacebookScraper:
             print("Exiting...")
         except json.JSONDecodeError:
             print("Response empty or unsupported. Exiting...")
+        finally:
+            dump_file.close()
 
     def extract_initial_graphql_request(self):
         for request in self.driver.requests:

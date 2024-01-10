@@ -4,3 +4,4 @@ config.json
 temp
 cursor.txt
 scrape_out
+dump.txt
