@@ -211,7 +211,7 @@ class FacebookScraper:
                     for edge in data["edges"] if edge["node"]["body"] is not None]
 
         while data["page_info"].get("has_next_page"):
-            body = FacebookScraper.generate_fetch_comments_body(self.body, feedback_id, data["page_info"]["end_cursor"])
+            body = FacebookScraper.generate_fetch_comments_body(self.body, feedback_id, data["page_info"]["end_cursor"], False)
 
             request = self.fetch_template.replace(
                 '"body": ""',
