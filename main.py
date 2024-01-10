@@ -4,7 +4,7 @@ from seleniumwire import webdriver
 from facebook_scraper import FacebookScraper
 
 
-with open("config.json", "r") as f:
+with open("config.json", "r", encoding="ascii") as f:
     config = json.load(f)
 
 

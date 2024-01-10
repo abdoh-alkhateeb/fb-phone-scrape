@@ -171,7 +171,7 @@ class FacebookScraper:
     def scrape_node(self, node):
         dump_file_name = os.path.join(self.dump_directory, node["post_id"])
         with open(f"{dump_file_name}.json", "w", encoding="utf-8") as dump_file:
-            id = node["post_id"]
+            _id = node["post_id"]
 
             story = node["comet_sections"]["content"]["story"]
 
@@ -185,7 +185,7 @@ class FacebookScraper:
             except KeyError:
                 comments = []
 
-            json.dump({"id": id, "text": text, "comments": comments},
+            json.dump({"id": _id, "text": text, "comments": comments},
                       dump_file, indent=4, ensure_ascii=False)
 
     def fetch_comments(self, feedback_id):
@@ -266,7 +266,7 @@ class FacebookScraper:
     def __del__(self):
         print("Saving cursor...", end=" ")
 
-        with open("cursor.txt", "w") as f:
+        with open("cursor.txt", "w", encoding="ascii") as f:
             f.write(self.cursor)
 
         print("done!")
