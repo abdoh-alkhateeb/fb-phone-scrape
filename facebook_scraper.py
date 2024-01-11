@@ -271,8 +271,8 @@ class FacebookScraper:
         depth2_reply_nodes = [self.fetch_replies(node["feedback"]["id"], node["feedback"]["expansion_info"]["expansion_token"], 2)
                               if node["feedback"]["replies_fields"]["count"] != 0 else [] for node in depth1_reply_nodes]
 
-        depth1_replies = [node["body"].get("text") for node in depth1_reply_nodes]
-        depth2_replies = [[node["body"].get("text") for node in nodes] for nodes in depth2_reply_nodes]
+        depth1_replies = [node["body"].get("text") if node["body"] is not None else None for node in depth1_reply_nodes]
+        depth2_replies = [[node["body"].get("text") if node["body"] is not None else None for node in nodes] for nodes in depth2_reply_nodes]
 
         replies = []
         for i, reply in enumerate(depth1_replies):
