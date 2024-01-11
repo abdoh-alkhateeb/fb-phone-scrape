@@ -81,9 +81,9 @@ class FacebookScraper:
         try:
             count = 0
             while True:
-                nodes = self.fetch_posts()
-                for node in nodes:
-                    self.scrape_node(node)
+                post_nodes = self.fetch_posts()
+                for node in post_nodes:
+                    self.scrape_post_node(node)
                     dump_file.write(node["post_id"] + "\n")
                     count += 1
 
@@ -168,12 +168,12 @@ class FacebookScraper:
 
         return urlencode(body)
 
-    def scrape_node(self, node):
-        dump_file_name = os.path.join(self.dump_directory, node["post_id"])
+    def scrape_post_node(self, post_node):
+        dump_file_name = os.path.join(self.dump_directory, post_node["post_id"])
         with open(f"{dump_file_name}.json", "w", encoding="utf-8") as dump_file:
-            _id = node["post_id"]
+            _id = post_node["post_id"]
 
-            story = node["comet_sections"]["content"]["story"]
+            story = post_node["comet_sections"]["content"]["story"]
 
             try:
                 text = story["message"]["text"]
@@ -181,12 +181,12 @@ class FacebookScraper:
                 text = ""
 
             try:
-                comments = self.fetch_comments(story["feedback"]["id"])
+                comment_nodes = self.fetch_comments(story["feedback"]["id"])
+                comments = [self.scrape_comment_node(node) for node in comment_nodes]
             except KeyError:
                 comments = []
 
-            json.dump({"id": _id, "text": text, "comments": comments},
-                      dump_file, indent=4, ensure_ascii=False)
+            json.dump({"id": _id, "text": text, "comments": comments}, dump_file, indent=4, ensure_ascii=False)
 
     def fetch_comments(self, feedback_id):
         body = FacebookScraper.generate_fetch_comments_body(self.body, feedback_id)
@@ -207,8 +207,7 @@ class FacebookScraper:
         data = [json.loads(line)for line in response.split("\n")][0]
         data = data["data"]["node"]["comment_rendering_instance_for_feed_location"]["comments"]
 
-        comments = [edge["node"]["body"].get("text")
-                    for edge in data["edges"] if edge["node"]["body"] is not None]
+        nodes = [edge["node"] for edge in data["edges"]]
 
         while data["page_info"].get("has_next_page"):
             body = FacebookScraper.generate_fetch_comments_body(self.body, feedback_id, data["page_info"]["end_cursor"], False)
@@ -229,10 +228,9 @@ class FacebookScraper:
             data = [json.loads(line)for line in response.split("\n")][0]
             data = data["data"]["node"]["comment_rendering_instance_for_feed_location"]["comments"]
 
-            comments.extend([edge["node"]["body"].get("text")
-                            for edge in data["edges"] if edge["node"]["body"] is not None])
+            nodes.extend([edge["node"] for edge in data["edges"]])
 
-        return comments
+        return nodes
 
     @staticmethod
     def generate_fetch_comments_body(body, feedback_id, cursor=None, is_primary=True):
@@ -258,6 +256,102 @@ class FacebookScraper:
         else:
             body["fb_api_req_friendly_name"] = "CommentsListComponentsPaginationQuery"
             body["doc_id"] = 7114405888582562
+
+        del body["__req"]
+
+        return urlencode(body)
+
+    def scrape_comment_node(self, comment_node):
+        comment_text = comment_node["body"].get("text") if comment_node["body"] is not None else None
+
+        if comment_node["feedback"]["replies_fields"]["count"] == 0:
+            return [comment_text, []]
+
+        depth1_reply_nodes = self.fetch_replies(comment_node["feedback"]["id"], comment_node["feedback"]["expansion_info"]["expansion_token"], 1)
+        depth2_reply_nodes = [self.fetch_replies(node["feedback"]["id"], node["feedback"]["expansion_info"]["expansion_token"], 2)
+                              if node["feedback"]["replies_fields"]["count"] != 0 else [] for node in depth1_reply_nodes]
+
+        depth1_replies = [node["body"].get("text") for node in depth1_reply_nodes]
+        depth2_replies = [[node["body"].get("text") for node in nodes] for nodes in depth2_reply_nodes]
+
+        replies = []
+        for i, reply in enumerate(depth1_replies):
+            replies.append([reply, depth2_replies[i]])
+
+        return [comment_text, replies]
+
+    def fetch_replies(self, feedback_id, expansion_token, depth=1):
+        body = FacebookScraper.generate_fetch_replies_body(self.body, feedback_id, expansion_token, None, depth)
+
+        request = self.fetch_template.replace(
+            '"body": ""',
+            f'"body": "{body}"'
+        ).replace(
+            '"referrer": ""',
+            f'"referrer": "https://www.facebook.com/groups/{self.group_id}"'
+        ).replace(
+            '"x-fb-friendly-name": ""',
+            f'"x-fb-friendly-name": "Depth{depth}CommentsListPaginationQuery"'
+        )
+
+        response = self.driver.execute_script(request)
+
+        data = [json.loads(line)for line in response.split("\n")][0]
+        data = data["data"]["node"]["replies_connection"]
+
+        nodes = [edge["node"] for edge in data["edges"]]
+
+        while data["page_info"].get("has_next_page"):
+            body = FacebookScraper.generate_fetch_replies_body(self.body, feedback_id, expansion_token, data["page_info"]["end_cursor"], depth)
+
+            request = self.fetch_template.replace(
+                '"body": ""',
+                f'"body": "{body}"'
+            ).replace(
+                '"referrer": ""',
+                f'"referrer": "https://www.facebook.com/groups/{self.group_id}"'
+            ).replace(
+                '"x-fb-friendly-name": ""',
+                f'"x-fb-friendly-name": "Depth{depth}CommentsListPaginationQuery"'
+            )
+
+            response = self.driver.execute_script(request)
+
+            data = [json.loads(line)for line in response.split("\n")][0]
+            data = data["data"]["node"]["replies_connection"]
+
+            nodes.extend([edge["node"] for edge in data["edges"]])
+
+        return nodes
+
+    @staticmethod
+    def generate_fetch_replies_body(body, feedback_id, expansion_token, cursor=None, depth=1):
+        body = parse_qs(body)
+        body = {k: v[0] for k, v in body.items()}
+
+        if depth == 1:
+            old_variables = """{"clientKey":null,"expansionToken":"MjoxNzA0OTcyOTk4OgF1phklzHy84B3QJqTAp2FDAr15CEd527P9nTNmJt7zv-0sfRiesqbpS5qRisVjFrBJdgp8zev8fkz9tTPXrYhME6lYV9OcfcE95c5DwAYvCwws75fhYHshj_rBSlIyCgH4UI95fbSni2WduhTpPfJAWX7Cj2T6XQ-kGbiPj_lZaEVQbd2hFRuQ6zs0RapFHWXQiAhH8lZ8E93T9D-iby1PMLxJ1_XNAqcyCqMRIpyCV3XyvaHsnfPI5jhUGPRoLQXhHUUW1m_47h1fIsFfLpBczzSy0imD49va1k7ab0g_NfOsdi6nEccAg6h623KIz5f0V91ZRaPa5xnWwc1Ida5L0KSTBZNSMr1k3GgtLkMyXRql7G0cc1Uyr8MAH_lNaxXGX4vF63KCIutT9njG9S78yW5trrqCm9-jAVx59KvnvQy0O_TVuna5lQA7on4jVujhCajrm9OBJ7Np7KA6hgqT3s4lcsxxjBnfx32Ru1PTgou-PPuQe8EraUtKZjxaRh81rDCjRBzjRjRDMj4","feedLocation":"DEDICATED_COMMENTING_SURFACE","focusCommentID":null,"repliesAfterCount":null,"repliesAfterCursor":null,"repliesBeforeCount":null,"repliesBeforeCursor":null,"scale":1,"useDefaultActor":false,"id":"ZmVlZGJhY2s6MjM5MTY1MDQzNzY5ODQ3NF8yMzkxNjY4MTM3Njk2NzA0"}"""
+        else:
+            old_variables = """{"clientKey":null,"expansionToken":"MjoxNzA0OTczMDE0OgF1Z2aoq0KQ3_g9VYA_R7_0RuJpokaVb0xZN5cJgXQcaO7DBvQWanu3JCk198otElCIvHIoXWifnmfEMXFqnX4ubALx33HduRsr7ySYcnx3d-LWtgHYT79hIpK0yy5rO_R3p_-fluVWk9IG6MBb06Bu01Zaf_Ayn8BPBEz58MrAUwOgOpqAmht9_3BZtyAfVVnA0hBbIvTa5L5FIouH-OdYS6qL_aD4dbvI6x8yaLwTciy7sHefAu9a369hRaVFASFs1VUKt5i_-jm7ijCiiLNz_lwAJB4CJENIU10Qc39MGhzPD8H4W-1lvPwVWGD_VlQ1GzFjIkky-hKJm2PP5qYjkdInmEzrsuWd6TkpuWL3nomav-civwnCV7qN-lOqkTuaG5A6WbPXM2aMG66n6f1xlsl0g_7zzEK9P-Lu2VxsDZ3Wh8-56gic8R1V2MgdVdu5sahLDJKutt2lybQBZlrl17cUZLdqZUpio2COfQqdYKcenn4OS6fDRRPjSTtJ_Joc20XCcbHmjF97OV8","feedLocation":"DEDICATED_COMMENTING_SURFACE","scale":1,"subRepliesAfterCount":null,"subRepliesAfterCursor":null,"subRepliesBeforeCount":null,"subRepliesBeforeCursor":null,"useDefaultActor":false,"id":"ZmVlZGJhY2s6MjM5MTY1MDQzNzY5ODQ3NF8yMzkxNjc0OTcxMDI5MzU0"}"""
+
+        new_variables = json.loads(old_variables)
+        new_variables["id"] = feedback_id
+        new_variables["expansionToken"] = expansion_token
+
+        if cursor:
+            if depth == 1:
+                new_variables["repliesAfterCursor"] = cursor
+            else:
+                new_variables["subRepliesAfterCursor"] = cursor
+
+        body["variables"] = json.dumps(new_variables)
+
+        if depth == 1:
+            body["fb_api_req_friendly_name"] = "Depth1CommentsListPaginationQuery"
+            body["doc_id"] = 6465084470259958
+        else:
+            body["fb_api_req_friendly_name"] = "Depth2CommentsListPaginationQuery"
+            body["doc_id"] = 7479782038719631
 
         del body["__req"]
 
