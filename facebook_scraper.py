@@ -19,7 +19,7 @@ class FacebookScraper:
         self.group_id = config["FB_GROUP_ID"]
         self.dump_directory = config["DUMP_DIRECTORY"]
 
-        self.cursor = None
+        self.cursor = ""
         self.fetch_template = None
 
         self.request = None
@@ -70,18 +70,41 @@ class FacebookScraper:
 
     def prepare_group(self):
         sleep(5)
-        self.driver.get(f"https://www.facebook.com/groups/{self.group_id}?sorting_setting=CHRONOLOGICAL")
+
+        self.driver.get(f"https://www.facebook.com/groups/{self.group_id}")
+
         sleep(5)
-        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+        wait = WebDriverWait(self.driver, 30)
+
+        xpath = '//*[@id]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div[3]/div/div/div[4]/div/div/div[2]/div/div/div/div[2]/div[2]/div[1]/div/div/div/div/div/div/div/div/span/div/div[1]/h2/span/span'
+        anchor = wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
+        anchor.click()
+
+        xpath = '//*[@id]/div/div[1]/div/div[3]/div/div/div[2]/div/div/div[1]/div[1]/div/div/div/div/div/div/div/div[1]/div/div[3]/div[1]/div/div[2]/span'
+        anchor = wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
+        anchor.click()
+
         sleep(5)
 
     def run(self):
-        self.extract_initial_graphql_request()
-        self.prepare_initial_fetch_request_body()
+        initial_response = self.extract_initial_graphql_request()
+        initial_nodes = self.prepare_initial_fetch_request_body(initial_response)
 
         dump_file = open("dump.txt", "a", encoding="ascii")
         try:
             count = 0
+
+            for node in initial_nodes:
+                self.scrape_post_node(node)
+                dump_file.write(node["post_id"] + "\n")
+                count += 1
+
+            os.system("cls") if os.name == "nt" else os.system("clear")
+            print(f"Scraped posts count (current session only): {count}")
+
+            sleep(5)
+
             while self.has_posts:
                 post_nodes = self.fetch_posts()
                 for node in post_nodes:
@@ -110,14 +133,42 @@ class FacebookScraper:
             if "GroupsCometFeedRegularStories_paginationGroup" not in body:
                 continue
 
-            self.request = request
-            break
+            if '{"data":{"group":{"if_viewer_can_see_expanded_color":' not in body:
+                continue
 
-    def prepare_initial_fetch_request_body(self):
+            self.request = request
+            return body
+
+    def prepare_initial_fetch_request_body(self, initial_response):
         if self.cursor:
-            self.body = FacebookScraper.generate_fetch_posts_body(self.request.body.decode(), self.cursor)
+            self.body = FacebookScraper.generate_fetch_posts_body(self.request.body.decode(), self.cursor, self.group_id)
+            return []
         else:
-            self.body = self.request.body.decode()
+            response = initial_response
+
+            objects = [json.loads(line) for line in response.split("\n")]
+
+            nodes = []
+
+            for obj in objects:
+                if obj.keys() == {"data", "extensions"}:
+                    continue
+                elif obj.keys() == {"label", "path", "data", "extensions"}:
+                    if "page_info" in obj["label"]:
+                        self.cursor = obj["data"]["page_info"]["end_cursor"]
+                        self.has_posts = obj["data"]["page_info"]["has_next_page"]
+                        self.body = FacebookScraper.generate_fetch_posts_body(self.request.body.decode(), self.cursor, self.group_id)
+                        continue
+                    try:
+                        node = obj["data"]["node"]
+                    except KeyError:
+                        continue
+                else:
+                    continue
+
+                nodes.append(node)
+
+            return nodes
 
     def fetch_posts(self):
         request = self.fetch_template.replace(
@@ -144,7 +195,7 @@ class FacebookScraper:
                 if "page_info" in obj["label"]:
                     self.cursor = obj["data"]["page_info"]["end_cursor"]
                     self.has_posts = obj["data"]["page_info"]["has_next_page"]
-                    self.body = FacebookScraper.generate_fetch_posts_body(self.body, self.cursor)
+                    self.body = FacebookScraper.generate_fetch_posts_body(self.body, self.cursor, self.group_id)
                     continue
                 try:
                     node = obj["data"]["node"]
@@ -158,16 +209,18 @@ class FacebookScraper:
         return nodes
 
     @staticmethod
-    def generate_fetch_posts_body(body, cursor):
+    def generate_fetch_posts_body(body, cursor, group_id):
         body = parse_qs(body)
         body = {k: v[0] for k, v in body.items()}
 
-        old_variables = body["variables"]
+        old_variables = """{"UFI2CommentsProvider_commentsKey":"CometGroupDiscussionRootSuccessQuery","count":3,"cursor":"","displayCommentsContextEnableComment":null,"displayCommentsContextIsAdPreview":null,"displayCommentsContextIsAggregatedShare":null,"displayCommentsContextIsStorySet":null,"displayCommentsFeedbackContext":null,"feedLocation":"GROUP","feedType":"DISCUSSION","feedbackSource":0,"focusCommentID":null,"privacySelectorRenderLocation":"COMET_STREAM","renderLocation":"group","scale":1,"sortingSetting":"CHRONOLOGICAL","stream_initial_count":1,"useDefaultActor":false,"id":"","__relay_internal__pv__IsWorkUserrelayprovider":false,"__relay_internal__pv__IsMergQAPollsrelayprovider":false,"__relay_internal__pv__CometUFIReactionsEnableShortNamerelayprovider":false,"__relay_internal__pv__CometUFIIsRTAEnabledrelayprovider":false,"__relay_internal__pv__StoriesArmadilloReplyEnabledrelayprovider":false,"__relay_internal__pv__StoriesRingrelayprovider":false}"""
 
         new_variables = json.loads(old_variables)
         new_variables["cursor"] = cursor
+        new_variables["id"] = group_id
 
         body["variables"] = json.dumps(new_variables)
+        body["doc_id"] = 6473278959439311
 
         return urlencode(body)
 
