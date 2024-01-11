@@ -1,4 +1,5 @@
 import json
+import traceback
 from seleniumwire import webdriver
 from facebook_scraper import FacebookScraper
 
@@ -18,7 +19,15 @@ options.binary_location = config["CHROME_BINARY"]
 
 def main():
     scraper = FacebookScraper(options, config)
-    scraper.run()
+
+    try:
+        scraper.run()
+    except KeyboardInterrupt:
+        pass
+    except Exception:
+        traceback.print_exc()
+    finally:
+        scraper.cleanup()
 
 
 if __name__ == "__main__":

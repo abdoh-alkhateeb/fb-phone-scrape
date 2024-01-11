@@ -360,7 +360,7 @@ class FacebookScraper:
 
         return urlencode(body)
 
-    def __del__(self):
+    def cleanup(self):
         print("Saving cursor...", end=" ")
 
         with open("cursor.txt", "w", encoding="ascii") as f:
