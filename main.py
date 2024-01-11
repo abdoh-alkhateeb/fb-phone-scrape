@@ -1,3 +1,4 @@
+import os
 import json
 import traceback
 from seleniumwire import webdriver
@@ -8,14 +9,15 @@ with open("config.json", "r", encoding="ascii") as f:
     config = json.load(f)
 
 
-options = webdriver.ChromeOptions()
+options = webdriver.FirefoxOptions()
 options.add_argument("--incognito")
 options.add_argument("--headless")
 options.add_argument("--no-sandbox")
-options.add_argument("--remote-debugging-port=9222")
 options.add_argument("--disable-extensions")
 options.add_argument("--disable-plugins-discovery")
-options.binary_location = config["CHROME_BINARY"]
+
+os.makedirs("temp", exist_ok=True)
+os.environ["TMPDIR"] = os.path.join(os.getcwd(), "temp")
 
 
 def main():
