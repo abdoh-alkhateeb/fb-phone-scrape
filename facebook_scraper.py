@@ -77,12 +77,12 @@ class FacebookScraper:
 
         wait = WebDriverWait(self.driver, 30)
 
-        xpath = "/html/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div[2]/div/div/div[4]/div/div/div[2]/div/div/div[1]/div[2]/div[2]/div[1]/div/div/div/div/div/div/div/div/span/div/div[1]/h2/span/span"
-        anchor = wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
+        selector = ".xzt5al7 > div:nth-child(1) > h2:nth-child(1) > span:nth-child(1) > span:nth-child(1)"
+        anchor = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, selector)))
         anchor.click()
 
-        xpath = "/html/body/div[1]/div/div[1]/div/div[3]/div/div/div[2]/div/div/div[1]/div[1]/div/div/div/div/div/div/div/div[1]/div/div[3]/div[1]/div/div[2]/span"
-        anchor = wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
+        selector = "div.x1i10hfl:nth-child(3) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > span:nth-child(1)"
+        anchor = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, selector)))
         anchor.click()
 
         sleep(5)
