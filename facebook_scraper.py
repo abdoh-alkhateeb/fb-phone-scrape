@@ -12,7 +12,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 class FacebookScraper:
     def __init__(self, options, config):
-        self.driver = webdriver.Firefox(options=options)
+        self.driver = webdriver.Chrome(options=options)
 
         self.email = config["FB_EMAIL"]
         self.password = config["FB_PASSWORD"]
