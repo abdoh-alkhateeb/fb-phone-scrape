@@ -62,7 +62,7 @@ class FacebookScraper:
         wait = WebDriverWait(self.driver, 30)
 
         try:
-            xpath = "//div[@title='Allow all cookies']"
+            xpath = "//button[@title='Allow all cookies']"
             allow_cookies = wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
             allow_cookies.click()
         except:
