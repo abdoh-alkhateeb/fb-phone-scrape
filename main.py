@@ -1,6 +1,5 @@
 import json
 from seleniumwire import webdriver
-
 from facebook_scraper import FacebookScraper
 
 

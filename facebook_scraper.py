@@ -209,7 +209,7 @@ class FacebookScraper:
 
         nodes = [edge["node"] for edge in data["edges"]]
 
-        while data["page_info"].get("has_next_page"):
+        while data["page_info"]["has_next_page"]:
             body = FacebookScraper.generate_fetch_comments_body(self.body, feedback_id, data["page_info"]["end_cursor"], False)
 
             request = self.fetch_template.replace(
@@ -301,7 +301,7 @@ class FacebookScraper:
 
         nodes = [edge["node"] for edge in data["edges"]]
 
-        while data["page_info"].get("has_next_page"):
+        while data["page_info"]["has_next_page"]:
             body = FacebookScraper.generate_fetch_replies_body(self.body, feedback_id, expansion_token, data["page_info"]["end_cursor"], depth)
 
             request = self.fetch_template.replace(
