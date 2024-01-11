@@ -25,6 +25,8 @@ class FacebookScraper:
         self.request = None
         self.body = None
 
+        self.has_posts = True
+
         print("Initializing...", end=" ")
 
         self.load_cursor()
@@ -80,7 +82,7 @@ class FacebookScraper:
         dump_file = open("dump.txt", "a", encoding="ascii")
         try:
             count = 0
-            while True:
+            while self.has_posts:
                 post_nodes = self.fetch_posts()
                 for node in post_nodes:
                     self.scrape_post_node(node)
@@ -141,6 +143,7 @@ class FacebookScraper:
             elif obj.keys() == {"label", "path", "data", "extensions"}:
                 if "page_info" in obj["label"]:
                     self.cursor = obj["data"]["page_info"]["end_cursor"]
+                    self.has_posts = obj["data"]["page_info"]["has_next_page"]
                     self.body = FacebookScraper.generate_fetch_posts_body(self.body, self.cursor)
                     continue
                 try:
