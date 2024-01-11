@@ -77,11 +77,11 @@ class FacebookScraper:
 
         wait = WebDriverWait(self.driver, 30)
 
-        xpath = '//*[@id]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div[3]/div/div/div[4]/div/div/div[2]/div/div/div/div[2]/div[2]/div[1]/div/div/div/div/div/div/div/div/span/div/div[1]/h2/span/span'
+        xpath = "/html/body/div[1]/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div/div[2]/div/div/div[4]/div/div/div[2]/div/div/div[1]/div[2]/div[2]/div[1]/div/div/div/div/div/div/div/div/span/div/div[1]/h2/span/span"
         anchor = wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
         anchor.click()
 
-        xpath = '//*[@id]/div/div[1]/div/div[3]/div/div/div[2]/div/div/div[1]/div[1]/div/div/div/div/div/div/div/div[1]/div/div[3]/div[1]/div/div[2]/span'
+        xpath = "/html/body/div[1]/div/div[1]/div/div[3]/div/div/div[2]/div/div/div[1]/div[1]/div/div/div/div/div/div/div/div[1]/div/div[3]/div[1]/div/div[2]/span"
         anchor = wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
         anchor.click()
 
