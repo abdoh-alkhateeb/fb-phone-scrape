@@ -7,7 +7,7 @@ def has_8_or_more_digits(input_string):
     return sum(char.isdigit() for char in input_string) >= 8
 
 
-def find_brk_digit_position(input_string):
+def find_breakoff_digit_position(input_string):
     digit_count = 0
     limit = 11
     for i, char in enumerate(input_string):
@@ -19,7 +19,7 @@ def find_brk_digit_position(input_string):
         if digit_count == limit:
             return True, i
 
-    return False, i
+    return False, None
 
 
 def remove_non_digits(input_string):
@@ -32,8 +32,8 @@ def parse(input_string):
 
     broken_matches = []
     for match in matches:
-        has_brk_digits, i = find_brk_digit_position(match)
-        if has_brk_digits:
+        has_breakoff_digit_count, i = find_breakoff_digit_position(match)
+        if has_breakoff_digit_count:
             broken_matches.append(match[:i + 1])
             broken_matches.append(match[i + 1:])
         else:
