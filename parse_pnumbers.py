@@ -87,6 +87,9 @@ def main():
     for post in posts:
         results.extend(parse_post(post))
 
+    results = list(set(results))
+    results.sort()
+
     for result in results:
         print(result)
 
