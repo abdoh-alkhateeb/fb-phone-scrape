@@ -36,7 +36,6 @@ class OutManager:
 ## ['0123', '01234567', '4567', '012345678901', '45678901', '8901', '456789012345', '89012345', '2345']
 
 def mini_lexer(input_string):
-    print(input_string)
     input = list(input_string)
     
     lst = OutManager()
