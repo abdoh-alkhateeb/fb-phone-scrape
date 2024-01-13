@@ -2,53 +2,77 @@ import os
 import re
 import json
 
+class OutManager:
+    def __init__(self):
+        self.output = list()
+        self.active_lists = [ list() ]
+        self.had_fin_char = False
 
-def has_8_or_more_digits(input_string):
-    return sum(char.isdigit() for char in input_string) >= 8
+    def add_char(self, c):
+        self.had_fin_char = False
+        for l in self.active_lists:
+            l.append(c)
 
+    def fin_char(self):
+        if self.had_fin_char:
+            return 
+        self.had_fin_char = True
 
-def find_breakoff_digit_position(input_string):
-    digit_count = 0
-    limit = 11
-    for i, char in enumerate(input_string):
-        if char.isdigit():
-            digit_count += 1
-            if digit_count == 1 and (char == "7" or char == "9"):
-                limit = 8
+        has_zero_list = False
+        for l in self.active_lists:
+            if len(l) > 0:
+                self.output.append(l.copy())
+            else:
+                has_zero_list = True
+        
+        if not has_zero_list:
+            self.active_lists.append(list())
+        self.active_lists = [ x for x in self.active_lists if len(x) <= 11 ]
 
-        if digit_count == limit:
-            return True, i
+## We basically need a minature lexer to resolve issues here
+## On every digt we start a run and grow all runs until they are longer than 11 characters
+## On every non-digit we save runs
+## eg: mini_lexer("0123 4567 8901 2345")
+## ['0123', '01234567', '4567', '012345678901', '45678901', '8901', '456789012345', '89012345', '2345']
 
-    return False, None
-
-
-def remove_non_digits(input_string):
-    return re.sub(r"\D", "", input_string)
-
-
-def parse(input_string):
-    matches = re.findall(r"[^a-zA-Z]{8,}", input_string)
-    matches = [match for match in matches if has_8_or_more_digits(match)]
-
-    broken_matches = []
-    for match in matches:
-        has_breakoff_digit_count, i = find_breakoff_digit_position(match)
-        if has_breakoff_digit_count:
-            broken_matches.append(match[:i + 1])
-            broken_matches.append(match[i + 1:])
+def mini_lexer(input_string):
+    print(input_string)
+    input = list(input_string)
+    
+    lst = OutManager()
+    for c in input:
+        if c.isdigit():
+            lst.add_char(c)
         else:
-            broken_matches.append(match)
+            lst.fin_char()
+    lst.fin_char()
 
-    matches = [remove_non_digits(match) for match in broken_matches if has_8_or_more_digits(match)]
+    total_out = lst.output
+    
+    for i, v in enumerate(total_out):
+        total_out[i] = ''.join(v)
 
-    results = []
-    for match in matches:
-        if match.startswith(("3", "7", "9")):
-            result = "+356" + (match[3:] if match.startswith("356") else match[:8])
-            results.append(result)
+    total_out = [ x for x in total_out if len(x) >= 8 and len(x) <= 11 ]
+    return total_out
+    
+def filter_int_prefix(string):
+    if string[:3] == '356' and len(string) == 11:
+        string = string[3:]
+    return string
 
-    return results
-
+def filter_for_len_and_prefix(string):
+    if string[0] != '7' and string[0] != '9':
+        return False
+    return len(string) == 8
+    
+def parse(input_string):
+    out = set()
+    for match in re.findall(r"[^a-zA-Z]{8,}", input_string):
+        match = mini_lexer(match)
+        match = [ filter_int_prefix(x) for x in match ]
+        match = [ x for x in match if filter_for_len_and_prefix(x) ]
+        out.update(match)
+    return [ '+356' + x for x in out ]
 
 def parse_post(post):
     results = []
@@ -70,12 +94,16 @@ def parse_post(post):
 
     return results
 
-
 def read_files_in_directory(directory_path):
     file_names = [file_name for file_name in os.listdir(directory_path)]
-    files = [json.load(open(os.path.join(directory_path, file_name), "r", encoding="utf-8")) for file_name in file_names]
-    return files
-
+    out = list()
+    for fname in file_names:
+        fname = os.path.join(directory_path, fname)
+        if not os.path.isfile(fname) or os.path.getsize(fname) == 0:
+            continue
+        with open(fname, "r", encoding="utf-8") as f:
+            out.append(json.load(f))
+    return out
 
 def main():
     with open("config.json", "r", encoding="ascii") as f:
