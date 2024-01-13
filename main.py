@@ -19,16 +19,18 @@ options.binary_location = config["CHROME_BINARY"]
 
 
 def main():
-    scraper = FacebookScraper(options, config)
+    keep_working = True
+    while keep_working:
+        scraper = FacebookScraper(options, config)
 
-    try:
-        scraper.run()
-    except KeyboardInterrupt:
-        pass
-    except Exception:
-        traceback.print_exc()
-    finally:
-        scraper.cleanup()
+        try:
+            scraper.run()
+        except KeyboardInterrupt:
+            keep_working = False
+        except Exception:
+            traceback.print_exc()
+        finally:
+            scraper.cleanup()
 
 
 if __name__ == "__main__":
