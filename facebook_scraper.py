@@ -8,6 +8,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common import exceptions
+
 
 
 class FacebookScraper:
@@ -65,7 +67,7 @@ class FacebookScraper:
             xpath = "/html/body/div[3]/div[2]/div/div/div/div/div[4]/button[2]"
             allow_cookies = wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
             allow_cookies.click()
-        except:
+        except exceptions.WebDriverException:
             pass
 
         email = wait.until(EC.visibility_of_element_located((By.NAME, "email")))
@@ -73,7 +75,9 @@ class FacebookScraper:
 
         password = wait.until(EC.visibility_of_element_located((By.NAME, "pass")))
         password.send_keys(self.password)
-        password.send_keys(Keys.RETURN)
+        
+        button = wait.until(EC.visibility_of_element_located((By.XPATH, "//button[@data-testid='royal_login_button']")))
+        button.click()
 
     def prepare_group(self):
         sleep(5)
