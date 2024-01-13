@@ -25,10 +25,10 @@ def main():
 
         try:
             scraper.run()
-        except KeyboardInterrupt:
-            keep_working = False
         except Exception:
             traceback.print_exc()
+        except:
+            keep_working = False
         finally:
             scraper.cleanup()
 
