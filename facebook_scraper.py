@@ -44,7 +44,6 @@ class FacebookScraper:
 
         print("Initializing...")
 
-        self.load_cookies()
         self.load_cursor()
         self.load_fetch_template()
         self.setup_dump_directory()
@@ -83,6 +82,9 @@ class FacebookScraper:
         os.makedirs(self.dump_directory, exist_ok=True)
 
     def login(self):
+        self.driver.get("https://www.facebook.com/robots.txt")
+        self.load_cookies()
+
         self.driver.get("https://www.facebook.com")
 
         wait = WebDriverWait(self.driver, 30)
