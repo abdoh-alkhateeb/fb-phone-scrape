@@ -157,10 +157,11 @@ class FacebookScraper:
                 for node in post_nodes:
                     self.scrape_post_node(node)
                     self.dump_file.write(node["post_id"] + "\n")
+                    last_post_id = node["post_id"]
                     count += 1
 
                 os.system("cls") if os.name == "nt" else os.system("clear")
-                print(f"Scraped posts count (current session only): {count}")
+                print(f"Scraped posts count (current session only): {count} https://www.facebook.com/groups/{self.group_id}/posts/{last_post_id}")
 
                 sleep(4)
         except json.JSONDecodeError:
