@@ -161,7 +161,7 @@ class FacebookScraper:
                 os.system("cls") if os.name == "nt" else os.system("clear")
                 print(f"Scraped posts count (current session only): {count}")
 
-                sleep(5)
+                sleep(4)
         except json.JSONDecodeError:
             print("Response empty or unsupported. Exiting...")
 
