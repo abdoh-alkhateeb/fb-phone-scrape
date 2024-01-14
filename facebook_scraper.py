@@ -10,8 +10,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common import exceptions
-
-
+import shr
 
 class FacebookScraper:
     def __init__(self):
@@ -151,7 +150,7 @@ class FacebookScraper:
 
             sleep(5)
 
-            while self.has_posts:
+            while self.has_posts and shr.keep_working:
                 post_nodes = self.fetch_posts()
                 for node in post_nodes:
                     self.scrape_post_node(node)
