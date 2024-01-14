@@ -1,5 +1,6 @@
 import os
 import json
+import pickle
 from time import sleep
 from urllib.parse import parse_qs, urlencode
 from seleniumwire import webdriver
@@ -29,25 +30,36 @@ class FacebookScraper:
 
         self.has_posts = True
 
-        print("Initializing...", end=" ")
+        print("Initializing...")
 
+        self.load_cookies()
         self.load_cursor()
         self.load_fetch_template()
         self.setup_dump_directory()
 
-        print("done!")
 
-        print("Preparing group...", end=" ")
+        print("Preparing group...")
 
         self.login()
         self.prepare_group()
 
-        print("done!")
+        print("Done!")
+
+    def load_cookies(self):
+        try:
+            with open("cookies.pkl", "rb") as f:
+                cookies = pickle.load(f)
+                for cookie in cookies:
+                    self.driver.add_cookie(cookie)
+                print("Cookies loaded...")
+        except FileNotFoundError:
+            pass
 
     def load_cursor(self):
         try:
             with open("cursor.txt", "r", encoding="ascii") as f:
                 self.cursor = f.read()
+                print("Cursor loaded...")
         except FileNotFoundError:
             pass
 
@@ -70,6 +82,14 @@ class FacebookScraper:
         except exceptions.WebDriverException:
             pass
 
+        try:
+            # Already logged in
+            wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "svg[aria-label='Your profile']")))
+            print("Already logged in...")
+            return
+        except exceptions.WebDriverException:
+            pass
+
         email = wait.until(EC.visibility_of_element_located((By.NAME, "email")))
         email.send_keys(self.email)
 
@@ -78,6 +98,9 @@ class FacebookScraper:
         
         button = wait.until(EC.visibility_of_element_located((By.XPATH, "//button[@data-testid='royal_login_button']")))
         button.click()
+        
+        wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "svg[aria-label='Your profile']")))
+        print("Login successful...")
 
     def prepare_group(self):
         sleep(5)
@@ -429,6 +452,13 @@ class FacebookScraper:
 
         with open("cursor.txt", "w", encoding="ascii") as f:
             f.write(self.cursor)
+
+        print("done!")
+        
+        print("Saving cookies...", end=" ")
+
+        with open("cookies.pkl", "wb") as f:
+            pickle.dump(self.driver.get_cookies(), f)
 
         print("done!")
 
