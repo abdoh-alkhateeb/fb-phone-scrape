@@ -15,6 +15,7 @@ from selenium.common import exceptions
 
 class FacebookScraper:
     def __init__(self, options, config):
+        self.dump_file = open("dump.txt", "a", encoding="ascii")
         self.driver = webdriver.Chrome(options=options)
 
         self.email = config["FB_EMAIL"]
@@ -125,13 +126,12 @@ class FacebookScraper:
         initial_response = self.extract_initial_graphql_request()
         initial_nodes = self.prepare_initial_fetch_request_body(initial_response)
 
-        dump_file = open("dump.txt", "a", encoding="ascii")
         try:
             count = 0
 
             for node in initial_nodes:
                 self.scrape_post_node(node)
-                dump_file.write(node["post_id"] + "\n")
+                self.dump_file.write(node["post_id"] + "\n")
                 count += 1
 
             os.system("cls") if os.name == "nt" else os.system("clear")
@@ -143,19 +143,15 @@ class FacebookScraper:
                 post_nodes = self.fetch_posts()
                 for node in post_nodes:
                     self.scrape_post_node(node)
-                    dump_file.write(node["post_id"] + "\n")
+                    self.dump_file.write(node["post_id"] + "\n")
                     count += 1
 
                 os.system("cls") if os.name == "nt" else os.system("clear")
                 print(f"Scraped posts count (current session only): {count}")
 
                 sleep(5)
-        except KeyboardInterrupt:
-            print("Exiting...")
         except json.JSONDecodeError:
             print("Response empty or unsupported. Exiting...")
-        finally:
-            dump_file.close()
 
     def extract_initial_graphql_request(self):
         for request in self.driver.requests:
@@ -467,3 +463,5 @@ class FacebookScraper:
         self.driver.quit()
 
         print("done!")
+        
+        self.dump_file.close()
